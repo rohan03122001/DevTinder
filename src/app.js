@@ -6,7 +6,11 @@ const connectDB = require("./config/database");
 const User = require("./models/user");
 const bcrypt = require("bcrypt");
 const { ValidateSignUpData } = require("./utils/validation");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
+
 app.use(express.json());
+app.use(cookieParser());
 
 app.post("/signup", async (req, res) => {
   try {
@@ -43,12 +47,32 @@ app.post("/login", async (req, res) => {
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (isValidPassword) {
+      const token = await jwt.sign({ _id: user._id }, "MySecret@0312");
+
+      res.cookie("token", token);
+
       res.send("Login Successs");
     } else {
       throw new Error("unable to login check credentials");
     }
   } catch (error) {
     res.status(400).send("Error while log in " + error);
+  }
+});
+
+app.get("/profile", async (req, res) => {
+  try {
+    const cookie = req.cookies;
+    const { token } = cookie;
+
+    const decoded = await jwt.verify(token, "MySecret@0312");
+
+    const user = await User.findById(decoded._id);
+
+    console.log(user);
+    res.send("profile for " + user);
+  } catch (error) {
+    res.status(400).send("Error " + error);
   }
 });
 app.patch("/user", async (req, res) => {
