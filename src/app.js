@@ -4,9 +4,53 @@ const app = express();
 
 const connectDB = require("./config/database");
 const User = require("./models/user");
-
+const bcrypt = require("bcrypt");
+const { ValidateSignUpData } = require("./utils/validation");
 app.use(express.json());
 
+app.post("/signup", async (req, res) => {
+  try {
+    //validate
+    ValidateSignUpData(req);
+
+    //password
+
+    const { password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log(hashedPassword);
+
+    const newUser = new User({
+      ...req.body,
+      password: hashedPassword,
+    });
+    await newUser.save();
+    res.send("User Created Successfully");
+  } catch (err) {
+    res.status(400).send("Error While Creating user " + err);
+  }
+});
+
+app.post("/login", async (req, res) => {
+  try {
+    const { emailId, password } = req.body;
+    console.log(emailId, password);
+
+    const user = await User.findOne({ emailId: emailId });
+    if (!user) {
+      throw new Error("unable to login check credentials");
+    }
+    console.log(user);
+    const isValidPassword = await bcrypt.compare(password, user.password);
+
+    if (isValidPassword) {
+      res.send("Login Successs");
+    } else {
+      throw new Error("unable to login check credentials");
+    }
+  } catch (error) {
+    res.status(400).send("Error while log in " + error);
+  }
+});
 app.patch("/user", async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(req.body._id, req.body);
@@ -31,17 +75,6 @@ app.get("/feed", async (req, res) => {
     res.send(users);
   } catch (err) {
     res.status(400).send("Error while fetching users " + err);
-  }
-});
-
-app.post("/signup", async (req, res) => {
-  const newUser = new User(req.body);
-
-  try {
-    await newUser.save();
-    res.send("User Created Successfully");
-  } catch (err) {
-    res.status(400).send("Error While Creating user " + err);
   }
 });
 
