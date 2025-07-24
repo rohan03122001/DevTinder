@@ -7,7 +7,7 @@ const User = require("./models/user");
 const bcrypt = require("bcrypt");
 const { ValidateSignUpData } = require("./utils/validation");
 const cookieParser = require("cookie-parser");
-const jwt = require("jsonwebtoken");
+// const jwt = require("jsonwebtoken");
 const { userAuth } = require("./middlewares/auth");
 
 app.use(express.json());
@@ -45,12 +45,14 @@ app.post("/login", async (req, res) => {
       throw new Error("unable to login check credentials");
     }
     console.log(user);
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isValidPassword = await user.isPasswordValid(password);
 
     if (isValidPassword) {
-      const token = await jwt.sign({ _id: user._id }, "MySecret@0312");
+      const token = await user.getJWT();
 
-      res.cookie("token", token);
+      res.cookie("token", token, {
+        expires: new Date(Date.now() + 8 * 3600000), // cookie will be removed after 8 hours
+      });
 
       res.send("Login Successs");
     } else {
