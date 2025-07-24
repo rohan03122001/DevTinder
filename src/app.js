@@ -8,6 +8,7 @@ const bcrypt = require("bcrypt");
 const { ValidateSignUpData } = require("./utils/validation");
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
+const { userAuth } = require("./middlewares/auth");
 
 app.use(express.json());
 app.use(cookieParser());
@@ -60,14 +61,9 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.get("/profile", async (req, res) => {
+app.get("/profile", userAuth, async (req, res) => {
   try {
-    const cookie = req.cookies;
-    const { token } = cookie;
-
-    const decoded = await jwt.verify(token, "MySecret@0312");
-
-    const user = await User.findById(decoded._id);
+    const user = req.user;
 
     console.log(user);
     res.send("profile for " + user);
