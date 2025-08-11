@@ -16,6 +16,35 @@ const ValidateSignUpData = (req) => {
   }
 };
 
+const ValidateProfileEditData = (req) => {
+  const allowedUpdates = [
+    "firstName",
+    "lastName",
+    "age",
+    "gender",
+    "about",
+    "photoURL",
+    "skills",
+  ];
+
+  const isValidData = Object.keys(req.body).every((field) =>
+    allowedUpdates.includes(field)
+  );
+
+  return isValidData;
+};
+
+const ValidatePassword = (req) => {
+  const allowedUpdate = ["password"];
+  console.log(req.body.password);
+  const isValidPassword = Object.keys(req.body).every((field) =>
+    allowedUpdate.includes(field)
+  );
+  return isValidPassword && validator.isStrongPassword(req.body.password);
+};
+
 module.exports = {
   ValidateSignUpData,
+  ValidateProfileEditData,
+  ValidatePassword,
 };

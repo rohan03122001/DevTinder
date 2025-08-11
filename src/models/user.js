@@ -12,6 +12,14 @@ const userSchema = new mongoose.Schema(
     lastName: {
       type: String,
     },
+    photoURL: {
+      type: String,
+      validate(value) {
+        if (!validator.isURL(value)) {
+          throw new Error("Invalid URL " + value);
+        }
+      },
+    },
     password: {
       type: String,
       required: true,
@@ -38,6 +46,12 @@ const userSchema = new mongoose.Schema(
           throw new Error("Gender Data not valid");
         }
       },
+    },
+    about: {
+      type: String,
+    },
+    skills: {
+      type: [String],
     },
   },
   {
