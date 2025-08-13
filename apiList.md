@@ -15,6 +15,6 @@
   POST /request/review/rejected/:requestID
 
 - user router
-  GET /user/connection
   GET /user/requests
+  GET /user/connection
   GET /user/feed
