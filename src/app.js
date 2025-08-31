@@ -10,13 +10,13 @@ const usersRouter = require("./routes/users");
 
 const app = express();
 
-const allowed =
-  (process.env.CORS_ORIGINS || "")
-    .split(",")
-    .map(s => s.trim())
-    .filter(Boolean);
+app.use(cors({
+  origin: (process.env.CORS_ORIGINS || '').split(',').map(s=>s.trim()).filter(Boolean),
+  credentials: true
+}));
 
-app.use(cors({ origin: allowed.length ? allowed : undefined, credentials: true }));
+app.set('trust proxy', 1);
+
 app.set("trust proxy", 1);
 
 app.use(express.json());
@@ -28,6 +28,11 @@ app.use("/request", requestRouter);
 app.use("/user", usersRouter);
 
 const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => res.send("Backend is running"));
+app.get("/healthz", (req, res) => res.json({ status: "ok" }));
+
 app.listen(PORT, () => {
   console.log("Server listening on", PORT);
 });
+
