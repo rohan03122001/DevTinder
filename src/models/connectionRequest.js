@@ -22,12 +22,10 @@ const connectionRequestSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-connectionRequestSchema.index({ fromUserID: 1, toUserID: 1 }, { unique: true });
-
 
 connectionRequestSchema.pre("save", function (next) {
   const connectionRequest = this;
-  if (connectionRequest.fromUserID.equals(connectionRequest.toUserID)) {
+  if (connectionRequest.fromUserID.equals(this.toUserID)) {
     throw new Error("Invalid UserID");
   }
 

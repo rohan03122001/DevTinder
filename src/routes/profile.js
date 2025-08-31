@@ -13,9 +13,7 @@ profileRouter.get("/profile/view", userAuth, async (req, res) => {
     const user = req.user;
 
     console.log(user);
-    const safe = user && typeof user.toObject === "function" ? user.toObject() : user;
-    if (safe && safe.password) delete safe.password;
-    return res.json(safe);
+    res.send("profile for " + user);
   } catch (error) {
     res.status(400).send("Error " + error);
   }
@@ -53,7 +51,7 @@ profileRouter.patch("/profile/password", userAuth, async (req, res) => {
 
     await loggedInUser.save();
 
-    return res.json({ message: "Password Updated" });
+    res.json({ message: "Password Updated", data: loggedInUser });
   } catch (error) {
     res.status(400).send("Error " + error);
   }
