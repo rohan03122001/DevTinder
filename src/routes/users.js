@@ -1,87 +1,63 @@
 const express = require("express");
-const { userAuth } = require("../middlewares/auth");
-const ConnectionRequestModel = require("../models/connectionRequest");
 const User = require("../models/user");
+const { userAuth } = require("../middlewares/auth");
+const usersRouter = express.Router();
 
-const userRouter = express.Router();
+const SAFE = "firstName lastName skills about photoURL";
 
-const SAFE_DATA = "firstName lastName skills about photoURL";
-
-userRouter.get("/user/requests/received", userAuth, async (req, res) => {
+usersRouter.get("/requests/received", userAuth, async (req, res) => {
   try {
-    const loggedInUser = req.user;
-
-    const connectionRequests = await ConnectionRequestModel.find({
-      toUserID: loggedInUser._id,
-      status: "interested",
-    }).populate("fromUserID", SAFE_DATA);
-
-    res.json({ message: "Data sent Success", connectionRequests });
-  } catch (error) {
-    res.status(400).send("Error: " + error);
+    const data = await require("./connectionRequest")
+      .find({ toUserID: req.user._id, status: "interested" })
+      .populate("fromUserID", SAFE);
+    res.json({ message: "Data sent Success", connectionRequests: data });
+  } catch (e) {
+    res.status(400).send("Error " + e);
   }
 });
 
-userRouter.get("/user/connections", userAuth, async (req, res) => {
+usersRouter.get("/connections", userAuth, async (req, res) => {
   try {
-    const loggedInUser = req.user;
-
-    const connections = await ConnectionRequestModel.find({
-      $or: [
-        { toUserID: loggedInUser._id, status: "accepted" },
-        { fromUserID: loggedInUser._id, status: "accepted" },
-      ],
-    })
-      .populate("fromUserID", SAFE_DATA)
-      .populate("toUserID", SAFE_DATA);
-
-    const data = connections.map((row) => {
-      if (row.fromUserID.toString() === loggedInUser._id.toString()) {
-        return row.toUserID;
-      }
-      return row.fromUserID;
+    const ConnectionRequest = require("./connectionRequest");
+    const accepted = await ConnectionRequest.find({
+      $or: [{ fromUserID: req.user._id }, { toUserID: req.user._id }],
+      status: "accepted",
     });
 
+    const ids = accepted.map(r =>
+      String(r.fromUserID) === String(req.user._id) ? r.toUserID : r.fromUserID
+    );
+
+    const data = await User.find({ _id: { $in: ids } }).select(SAFE);
     res.json({ message: "Data sent Success", data });
-  } catch (error) {
-    res.status(400).send("Error: " + error);
+  } catch (e) {
+    res.status(400).send("Error " + e);
   }
 });
 
-userRouter.get("/user/feed", userAuth, async (req, res) => {
+usersRouter.get("/feed", userAuth, async (req, res) => {
   try {
-    const loggedInUser = req.user;
-    const page = parseInt(req.query.page) || 1;
-    let limit = parseInt(req.query.limit) || 10;
-
-    limit = limit > 50 ? 50 : limit;
+    const page = Math.max(parseInt(req.query.page || "1", 10), 1);
+    const limit = Math.max(parseInt(req.query.limit || "10", 10), 1);
     const skip = (page - 1) * limit;
-    
-    const connections = await ConnectionRequestModel.find({
-      $or: [{ fromUserID: loggedInUser._id }, { toUserID: loggedInUser._id }],
-    }).select("fromUserID toUserID");
 
-    const hideUserFromFeed = new Set();
-    connections.forEach((req) => {
-      hideUserFromFeed.add(req.fromUserID.toString());
-      hideUserFromFeed.add(req.toUserID.toString());
+    const ConnectionRequest = require("./connectionRequest");
+    const requests = await ConnectionRequest.find({
+      $or: [{ fromUserID: req.user._id }, { toUserID: req.user._id }],
     });
-    console.log(hideUserFromFeed);
 
-    const data = await User.find({
-      $and: [
-        { _id: { $nin: Array.from(hideUserFromFeed) } },
-        { _id: { $ne: loggedInUser._id } },
-      ],
-    })
-      .select(SAFE_DATA)
-      .skip(skip)
-      .limit(limit);
+    const excluded = new Set([
+      String(req.user._id),
+      ...requests.map(r => String(r.fromUserID)),
+      ...requests.map(r => String(r.toUserID)),
+    ]);
 
+    const query = { _id: { $nin: Array.from(excluded) } };
+    const data = await User.find(query).select(SAFE).limit(limit).skip(skip);
     res.json(data);
-  } catch (error) {
-    res.status(400).send("Error: " + error);
+  } catch (e) {
+    res.status(400).send("Error " + e);
   }
 });
 
-module.exports = { userRouter };
+module.exports = usersRouter;

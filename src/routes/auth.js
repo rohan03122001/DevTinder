@@ -1,63 +1,49 @@
 const express = require("express");
-const User = require("../models/user");
 const bcrypt = require("bcrypt");
-const { ValidateSignUpData } = require("../utils/validation");
-
+const User = require("../models/user");
 const authRouter = express.Router();
 
 authRouter.post("/signup", async (req, res) => {
   try {
-    //validate
-    ValidateSignUpData(req);
-
-    //password
-
-    const { password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    console.log(hashedPassword);
-
-    const newUser = new User({
-      ...req.body,
-      password: hashedPassword,
-    });
-    await newUser.save();
-    res.send("User Created Successfully");
-  } catch (err) {
-    res.status(400).send("Error While Creating user " + err);
+    const user = new User(req.body);
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(user.password, salt);
+    await user.save();
+    res.status(201).json({ message: "Signup Success" });
+  } catch (error) {
+    res.status(400).send("Error While Creating user " + error);
   }
 });
 
 authRouter.post("/login", async (req, res) => {
   try {
     const { emailId, password } = req.body;
-    console.log(emailId, password);
+    const user = await User.findOne({ emailId }).select("+password");
+    if (!user) return res.status(401).json({ message: "Invalid email or password" });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: "Invalid email or password" });
 
-    const user = await User.findOne({ emailId: emailId });
-    if (!user) {
-      return res.status(401).json({ message: "Invalid email or password" });
-    }
-    console.log(user);
-    const isValidPassword = await user.isPasswordValid(password);
-
-    if (isValidPassword) {
-      const token = await user.getJWT();
-
-      res.cookie("token", token, {
-        expires: new Date(Date.now() + 8 * 3600000), // cookie will be removed after 8 hours
-      });
-
-      res.json({ message: "Login Success" });
-    } else {
-      return res.status(401).json({ message: "Invalid email or password" });
-    }
+    const token = await user.getJWT({ expiresIn: "8h" });
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 8 * 3600000
+    });
+    res.json({ message: "Login Success" });
   } catch (error) {
-    res.status(400).send("Error while log in " + error);
+    res.status(500).json({ message: "Login failed" });
   }
 });
 
 authRouter.post("/logout", async (req, res) => {
-  res.cookie("token", null, { expires: new Date(Date.now()) });
-  res.send();
+  res.cookie("token", "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    expires: new Date(0)
+  });
+  res.json({ message: "Logout Success" });
 });
 
 module.exports = authRouter;
