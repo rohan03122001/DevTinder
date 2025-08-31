@@ -5,7 +5,7 @@ const User = require("../models/user");
 
 const userRouter = express.Router();
 
-const SAFE_DATA = ["firstName", "lastName", "skills", "about"];
+const SAFE_DATA = "firstName lastName skills about photoURL";
 
 userRouter.get("/user/requests/received", userAuth, async (req, res) => {
   try {
@@ -78,7 +78,7 @@ userRouter.get("/user/feed", userAuth, async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    res.send(data);
+    res.json(data);
   } catch (error) {
     res.status(400).send("Error: " + error);
   }

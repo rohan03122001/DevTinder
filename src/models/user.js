@@ -14,11 +14,11 @@ const userSchema = new mongoose.Schema(
     },
     photoURL: {
       type: String,
-      validate(value) {
-        if (!validator.isURL(value)) {
-          throw new Error("Invalid URL " + value);
-        }
-      },
+      // validate(value) {
+      //   if (value && !validator.isURL(value)) {
+      //     throw new Error("Invalid URL " + value);
+      //   }
+      // },
     },
     password: {
       type: String,
@@ -42,7 +42,7 @@ const userSchema = new mongoose.Schema(
     gender: {
       type: String,
       validate(value) {
-        if (!["male", "female", "others"].includes(value)) {
+        if (value && !["male","female","others"].includes(value)) {
           throw new Error("Gender Data not valid");
         }
       },
@@ -76,3 +76,13 @@ userSchema.methods.isPasswordValid = async function (userPasswordInput) {
 };
 
 module.exports = mongoose.model("User", userSchema);
+
+
+// Hide sensitive fields on JSON
+userSchema.set('toJSON', {
+  transform(doc, ret) {
+    delete ret.password;
+    delete ret.__v;
+    return ret;
+  }
+});

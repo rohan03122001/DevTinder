@@ -26,7 +26,7 @@ requestRouter.post(
         toUserID,
       });
       if (userExists) {
-        return res.status(400).send("Requrest already there");
+        return res.status(400).send("Request already existss");
       }
 
       const existingRequest = await ConnectionRequestModel.findOne({
@@ -40,7 +40,7 @@ requestRouter.post(
       });
 
       if (existingRequest) {
-        return res.status(400).send("Request already exist");
+        return res.status(409).json({ message: "Request already exists" });
       }
 
       const connectionRequest = new ConnectionRequestModel({
@@ -90,7 +90,7 @@ requestRouter.post(
       connectionRequest.status = status;
       const data = await connectionRequest.save();
 
-      res.json({ message: "connection updated: " + status, data });
+      res.json({ message: "Connection updated: " + status, data });
     } catch (error) {
       res.status(400).send("Error " + error);
     }

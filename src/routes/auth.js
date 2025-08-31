@@ -34,7 +34,7 @@ authRouter.post("/login", async (req, res) => {
 
     const user = await User.findOne({ emailId: emailId });
     if (!user) {
-      throw new Error("unable to login check credentials");
+      return res.status(401).json({ message: "Invalid email or password" });
     }
     console.log(user);
     const isValidPassword = await user.isPasswordValid(password);
@@ -46,9 +46,9 @@ authRouter.post("/login", async (req, res) => {
         expires: new Date(Date.now() + 8 * 3600000), // cookie will be removed after 8 hours
       });
 
-      res.send("Login Successs");
+      res.json({ message: "Login Success" });
     } else {
-      throw new Error("unable to login check credentials");
+      return res.status(401).json({ message: "Invalid email or password" });
     }
   } catch (error) {
     res.status(400).send("Error while log in " + error);
