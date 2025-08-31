@@ -1,6 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
-const User = require("../models/user");
+const User = require("../models/user"); // adjust if your path differs
 const authRouter = express.Router();
 
 authRouter.post("/signup", async (req, res) => {
@@ -20,8 +20,9 @@ authRouter.post("/login", async (req, res) => {
     const { emailId, password } = req.body;
     const user = await User.findOne({ emailId }).select("+password");
     if (!user) return res.status(401).json({ message: "Invalid email or password" });
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ message: "Invalid email or password" });
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return res.status(401).json({ message: "Invalid email or password" });
 
     const token = await user.getJWT({ expiresIn: "8h" });
     res.cookie("token", token, {

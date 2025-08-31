@@ -1,21 +1,40 @@
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
-require("./config/database");
+require("../config/database");
 
-const authRouter = require("./routes/auth");
-const profileRouter = require("./routes/profile");
-const requestRouter = require("./routes/request");
-const usersRouter = require("./routes/users");
+const authRouter = require("../routes/auth");
+const profileRouter = require("../routes/profile");
+const requestRouter = require("../routes/request");
+const usersRouter = require("../routes/users");
 
 const app = express();
 
-app.use(cors({
-  origin: (process.env.CORS_ORIGINS || '').split(',').map(s=>s.trim()).filter(Boolean),
-  credentials: true
-}));
+const PROD_EXACT = [
+  "https://dev-tinder-frontend-vert.vercel.app"
+];
 
-app.set('trust proxy', 1);
+const isAllowedOrigin = (origin) => {
+  if (!origin) return false;
+  try {
+    const url = new URL(origin);
+    if (PROD_EXACT.includes(origin)) return true;
+    if (url.hostname.endsWith(".vercel.app")) return true; // allow previews
+    return false;
+  } catch {
+    return false;
+  }
+};
+
+const corsMiddleware = cors({
+  origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
+  credentials: true,
+  methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+});
+
+app.use(corsMiddleware);
+app.options("*", corsMiddleware);
 
 app.set("trust proxy", 1);
 
@@ -35,4 +54,3 @@ app.get("/healthz", (req, res) => res.json({ status: "ok" }));
 app.listen(PORT, () => {
   console.log("Server listening on", PORT);
 });
-
