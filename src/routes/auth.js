@@ -1,9 +1,9 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const User = require("../models/user"); // adjust if your path differs
-const authRouter = express.Router();
+const router = express.Router();
 
-authRouter.post("/signup", async (req, res) => {
+router.post("/signup", async (req, res) => {
   try {
     const user = new User(req.body);
     const salt = await bcrypt.genSalt(10);
@@ -15,29 +15,47 @@ authRouter.post("/signup", async (req, res) => {
   }
 });
 
-authRouter.post("/login", async (req, res) => {
+router.post("/login", async (req, res) => {
   try {
     const { emailId, password } = req.body;
+
+    if (!emailId || !password) {
+      return res.status(400).json({ message: "Email and password required" });
+    }
+
     const user = await User.findOne({ emailId }).select("+password");
-    if (!user) return res.status(401).json({ message: "Invalid email or password" });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
 
     const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return res.status(401).json({ message: "Invalid email or password" });
+    if (!ok) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
 
-    const token = await user.getJWT({ expiresIn: "8h" });
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error("JWT_SECRET missing");
+      return res.status(500).json({ message: "Server misconfigured" });
+    }
+
+    const token = jwt.sign({ _id: user._id }, secret, { expiresIn: "8h" });
+
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,
       sameSite: "none",
       maxAge: 8 * 3600000
     });
+
     res.json({ message: "Login Success" });
   } catch (error) {
+    console.error("Login error:", error?.message || error);
     res.status(500).json({ message: "Login failed" });
   }
 });
 
-authRouter.post("/logout", async (req, res) => {
+router.post("/logout", async (_req, res) => {
   res.cookie("token", "", {
     httpOnly: true,
     secure: true,
@@ -47,4 +65,4 @@ authRouter.post("/logout", async (req, res) => {
   res.json({ message: "Logout Success" });
 });
 
-module.exports = authRouter;
+module.exports = router;
